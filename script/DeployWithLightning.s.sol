@@ -16,7 +16,7 @@ contract DeployWithLightning is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // Deploy SimpleEscrowFactory
-        SimpleEscrowFactory factoryContract = new SimpleEscrowFactory();
+        SimpleEscrowFactory factoryContract = new SimpleEscrowFactory(address(0));
         factory = address(factoryContract);
         console.log("SimpleEscrowFactory deployed at:", factory);
         
@@ -35,10 +35,7 @@ contract DeployWithLightning is Script {
         }
         
         // Deploy LightningBridge
-        LightningBridge bridgeContract = new LightningBridge(
-            factory,
-            resolver
-        );
+        LightningBridge bridgeContract = new LightningBridge(factory);
         bridge = address(bridgeContract);
         console.log("LightningBridge deployed at:", bridge);
         

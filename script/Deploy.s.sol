@@ -14,7 +14,7 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // Deploy SimpleEscrowFactory
-        SimpleEscrowFactory factoryContract = new SimpleEscrowFactory();
+        SimpleEscrowFactory factoryContract = new SimpleEscrowFactory(address(0));
         factory = address(factoryContract);
         console.log("SimpleEscrowFactory deployed at:", factory);
         

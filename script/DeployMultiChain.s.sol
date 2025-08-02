@@ -42,7 +42,7 @@ contract DeployMultiChain is Script {
                 
                 // Deploy SimpleEscrowFactory with deterministic address
                 bytes32 salt = keccak256(abi.encodePacked("BMN_FACTORY_V2", chains[i].chainId));
-                SimpleEscrowFactory factory = new SimpleEscrowFactory{salt: salt}();
+                SimpleEscrowFactory factory = new SimpleEscrowFactory{salt: salt}(address(0));
                 
                 address adapterAddress;
                 if (chains[i].limitOrderProtocol != address(0)) {
@@ -69,7 +69,7 @@ contract DeployMultiChain is Script {
                     success: true
                 });
                 
-                console.log("✅ Successfully deployed to", chains[i].name);
+                console.log("[SUCCESS] Successfully deployed to", chains[i].name);
                 console.log("Factory:", address(factory));
                 console.log("Adapter:", adapterAddress);
                 
@@ -77,7 +77,7 @@ contract DeployMultiChain is Script {
                 _saveChainDeployment(chains[i].chainId, address(factory), adapterAddress);
                 
             } catch Error(string memory reason) {
-                console.log("❌ Failed to deploy to", chains[i].name);
+                console.log("[ERROR] Failed to deploy to", chains[i].name);
                 console.log("Reason:", reason);
                 results[i] = DeploymentResult({
                     chainId: chains[i].chainId,
@@ -98,9 +98,9 @@ contract DeployMultiChain is Script {
         console.log("========================================");
         for (uint256 i = 0; i < results.length; i++) {
             if (results[i].success) {
-                console.log("✅", results[i].chainName, "- Factory:", results[i].factory);
+                console.log("[SUCCESS]", results[i].chainName, "- Factory:", results[i].factory);
             } else {
-                console.log("❌", results[i].chainName, "- FAILED");
+                console.log("[ERROR]", results[i].chainName, "- FAILED");
             }
         }
     }
