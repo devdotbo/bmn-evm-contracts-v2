@@ -115,10 +115,16 @@ deploy_contract() {
 extract_address() {
     local chain_id="$1"
     local contract_name="$2"
+    local script_name="$3"  # Optional script name to narrow down search
     local broadcast_dir="$PROJECT_ROOT/broadcast"
     
-    # Find the most recent broadcast file for the chain
-    local broadcast_file=$(find "$broadcast_dir" -name "run-latest.json" -path "*/$chain_id/*" 2>/dev/null | head -1)
+    # Find the broadcast file for the specific script and chain
+    local broadcast_file
+    if [ ! -z "$script_name" ]; then
+        broadcast_file=$(find "$broadcast_dir" -name "run-latest.json" -path "*$script_name*" -path "*/$chain_id/*" 2>/dev/null | head -1)
+    else
+        broadcast_file=$(find "$broadcast_dir" -name "run-latest.json" -path "*/$chain_id/*" 2>/dev/null | head -1)
+    fi
     
     if [ -f "$broadcast_file" ]; then
         # Extract address for the contract
@@ -199,7 +205,7 @@ main() {
     
     # Deploy Mock USDC
     if deploy_contract "script/deploy/DeployMockUSDC.s.sol" "$BASE_RPC" "Base"; then
-        USDC_ADDRESS=$(extract_address "31337" "MockUSDC")
+        USDC_ADDRESS=$(extract_address "8453" "MockERC20" "DeployMockUSDC")
         if [ ! -z "$USDC_ADDRESS" ]; then
             log "Mock USDC deployed at: $USDC_ADDRESS"
         fi
@@ -207,7 +213,7 @@ main() {
     
     # Deploy SimpleEscrowFactory
     if deploy_contract "script/deploy/DeploySimpleEscrowFactory.s.sol" "$BASE_RPC" "Base"; then
-        FACTORY_BASE_ADDRESS=$(extract_address "31337" "SimpleEscrowFactory")
+        FACTORY_BASE_ADDRESS=$(extract_address "8453" "SimpleEscrowFactory" "DeploySimpleEscrowFactory")
         if [ ! -z "$FACTORY_BASE_ADDRESS" ]; then
             log "SimpleEscrowFactory deployed at: $FACTORY_BASE_ADDRESS"
         fi
@@ -215,11 +221,16 @@ main() {
     
     # Deploy OneInchAdapter (if script exists)
     if [ -f "$PROJECT_ROOT/script/deploy/DeployOneInchAdapter.s.sol" ]; then
-        if deploy_contract "script/deploy/DeployOneInchAdapter.s.sol" "$BASE_RPC" "Base"; then
-            ONEINCH_ADDRESS=$(extract_address "31337" "OneInchAdapter")
-            if [ ! -z "$ONEINCH_ADDRESS" ]; then
-                log "OneInchAdapter deployed at: $ONEINCH_ADDRESS"
+        if [ ! -z "$FACTORY_BASE_ADDRESS" ]; then
+            FACTORY_ADDRESS=$FACTORY_BASE_ADDRESS deploy_contract "script/deploy/DeployOneInchAdapter.s.sol" "$BASE_RPC" "Base"
+            if [ $? -eq 0 ]; then
+                ONEINCH_ADDRESS=$(extract_address "8453" "OneInchAdapter" "DeployOneInchAdapter")
+                if [ ! -z "$ONEINCH_ADDRESS" ]; then
+                    log "OneInchAdapter deployed at: $ONEINCH_ADDRESS"
+                fi
             fi
+        else
+            log_error "Cannot deploy OneInchAdapter: Factory address not available"
         fi
     fi
     
@@ -228,7 +239,7 @@ main() {
        --arg factory "$FACTORY_BASE_ADDRESS" \
        --arg oneinch "$ONEINCH_ADDRESS" \
        '.chains.base = {
-          "chainId": 31337,
+          "chainId": 8453,
           "rpcUrl": "'$BASE_RPC'",
           "contracts": {
             "MockUSDC": $usdc,
@@ -243,7 +254,7 @@ main() {
     
     # Deploy Mock XTZ
     if deploy_contract "script/deploy/DeployMockXTZ.s.sol" "$ETHERLINK_RPC" "Etherlink"; then
-        XTZ_ADDRESS=$(extract_address "31338" "MockXTZ")
+        XTZ_ADDRESS=$(extract_address "42793" "MockERC20" "DeployMockXTZ")
         if [ ! -z "$XTZ_ADDRESS" ]; then
             log "Mock XTZ deployed at: $XTZ_ADDRESS"
         fi
@@ -251,7 +262,7 @@ main() {
     
     # Deploy SimpleEscrowFactory
     if deploy_contract "script/deploy/DeploySimpleEscrowFactory.s.sol" "$ETHERLINK_RPC" "Etherlink"; then
-        FACTORY_ETHERLINK_ADDRESS=$(extract_address "31338" "SimpleEscrowFactory")
+        FACTORY_ETHERLINK_ADDRESS=$(extract_address "42793" "SimpleEscrowFactory" "DeploySimpleEscrowFactory")
         if [ ! -z "$FACTORY_ETHERLINK_ADDRESS" ]; then
             log "SimpleEscrowFactory deployed at: $FACTORY_ETHERLINK_ADDRESS"
         fi
@@ -259,11 +270,16 @@ main() {
     
     # Deploy LightningBridge (if script exists)
     if [ -f "$PROJECT_ROOT/script/deploy/DeployLightningBridge.s.sol" ]; then
-        if deploy_contract "script/deploy/DeployLightningBridge.s.sol" "$ETHERLINK_RPC" "Etherlink"; then
-            LIGHTNING_ADDRESS=$(extract_address "31338" "LightningBridge")
-            if [ ! -z "$LIGHTNING_ADDRESS" ]; then
-                log "LightningBridge deployed at: $LIGHTNING_ADDRESS"
+        if [ ! -z "$FACTORY_ETHERLINK_ADDRESS" ]; then
+            FACTORY_ADDRESS=$FACTORY_ETHERLINK_ADDRESS deploy_contract "script/deploy/DeployLightningBridge.s.sol" "$ETHERLINK_RPC" "Etherlink"
+            if [ $? -eq 0 ]; then
+                LIGHTNING_ADDRESS=$(extract_address "42793" "LightningBridge" "DeployLightningBridge")
+                if [ ! -z "$LIGHTNING_ADDRESS" ]; then
+                    log "LightningBridge deployed at: $LIGHTNING_ADDRESS"
+                fi
             fi
+        else
+            log_error "Cannot deploy LightningBridge: Factory address not available"
         fi
     fi
     
@@ -272,7 +288,7 @@ main() {
        --arg factory "$FACTORY_ETHERLINK_ADDRESS" \
        --arg lightning "$LIGHTNING_ADDRESS" \
        '.chains.etherlink = {
-          "chainId": 31338,
+          "chainId": 42793,
           "rpcUrl": "'$ETHERLINK_RPC'",
           "contracts": {
             "MockXTZ": $xtz,
