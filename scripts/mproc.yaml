@@ -1,13 +1,17 @@
-# mproc configuration for Bridge Me Not V2
-# Runs Base and Etherlink chains in parallel
+# Bridge Me Not V2 - Multi-Chain Development Environment
+# Runs Base and Etherlink chains with development tools
 
 procs:
+  # === Chain Processes ===
   base:
     shell: bash scripts/anvil-base.sh
     label: BASE
     color: blue
     restart: on-failure
     stop: term
+    autostart: true
+    env:
+      CHAIN_NAME: "Base (Chain ID: 8453)"
     
   etherlink:
     shell: bash scripts/anvil-etherlink.sh  
@@ -15,3 +19,71 @@ procs:
     color: green
     restart: on-failure
     stop: term
+    autostart: true
+    env:
+      CHAIN_NAME: "Etherlink (Chain ID: 42793)"
+  
+  # === Deployment & Setup ===
+  deploy:
+    shell: ./scripts/deploy.sh -y
+    label: DEPLOY
+    color: yellow
+    autostart: false
+    stop: term
+  
+  fund-accounts:
+    shell: ./scripts/fund-accounts.sh
+    label: FUND
+    color: cyan
+    autostart: false
+    stop: term
+  
+  # === Monitoring ===
+  status:
+    shell: ./scripts/status.sh
+    label: STATUS
+    color: magenta
+    autostart: false
+    stop: term
+  
+  watch-status:
+    shell: ./scripts/watch-status.sh
+    label: WATCH
+    color: white
+    autostart: false
+    stop: term
+  
+  # === Testing ===
+  test-atomic-swap:
+    shell: ./scripts/test-atomic-swap.sh
+    label: TEST-SWAP
+    color: bright-green
+    autostart: false
+    stop: term
+  
+  test-atomic-swap-verbose:
+    shell: VERBOSE=true ./scripts/test-atomic-swap.sh
+    label: TEST-VERBOSE
+    color: bright-yellow
+    autostart: false
+    stop: term
+  
+  # === Utilities ===
+  cleanup:
+    shell: ./scripts/cleanup.sh -y
+    label: CLEANUP
+    color: red
+    autostart: false
+    stop: term
+
+# Configuration for better development experience
+scrollback: 5000
+proc_list_width: 20
+mouse_scroll_speed: 5
+
+# Custom keybindings
+keymap_procs:
+  <C-q>: { c: quit }
+  <C-s>: { c: start-proc }
+  <C-x>: { c: stop-proc }
+  <C-r>: { c: restart-proc }
