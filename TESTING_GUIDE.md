@@ -31,7 +31,13 @@ forge test --match-test testAtomicSwapFlow
 
 ### 2. Cross-Chain Integration Tests (Deno/Viem)
 
-These tests verify atomic swaps work correctly across chains using actual deployed contracts.
+These tests verify atomic swaps work correctly across chains using actual deployed contracts. The tests use Deno as the runtime and Viem for Ethereum interactions.
+
+#### Prerequisites
+
+- **Deno 2.0+**: Install from [deno.com](https://docs.deno.com/runtime/getting_started/installation)
+- **Environment Variables**: Configure in `.env` file
+- **Permissions**: Tests require `--allow-read`, `--allow-write`, `--allow-env`, `--allow-net`
 
 #### Setup
 
@@ -47,6 +53,14 @@ mprocs -c mprocs.yaml
 
 3. Run Deno tests:
 ```bash
+# Using task runner (recommended)
+cd scripts
+deno task test:atomic-swap
+
+# Or directly with permissions
+deno run --allow-read --allow-write --allow-env --allow-net test-atomic-swap.ts
+
+# Or using the shell script
 ./scripts/test-runner.sh
 ```
 
@@ -61,6 +75,21 @@ mprocs -c mprocs.yaml
    - `s` - Start a process
    - Select `test-deno` to run Deno tests
    - `q` - Quit
+
+#### Deno Test Features
+
+- **Native TypeScript**: No compilation step required
+- **Viem Integration**: Full type safety for Ethereum interactions
+- **Environment Variables**: Secure handling with Deno.env
+- **Permission System**: Granular security controls
+- **Import Maps**: Clean imports via deno.json
+
+#### Example Test
+
+See `scripts/example-viem-test.ts` for a simple demonstration:
+```bash
+deno run --allow-env --allow-net scripts/example-viem-test.ts
+```
 
 ## Test Structure
 
