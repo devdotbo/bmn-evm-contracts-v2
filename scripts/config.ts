@@ -1,8 +1,32 @@
-import { load } from "@std/dotenv";
+// Deno configuration for Viem atomic swap tests
+// Uses proper Deno environment variable handling
+
 import type { Hex, Address } from "viem";
 
-// Load environment variables
-await load({ export: true, envPath: "../.env" });
+// Load environment variables from .env file
+// This requires --allow-read and --allow-env permissions
+try {
+  const dotenvPath = new URL("../.env", import.meta.url).pathname;
+  const dotenvContent = await Deno.readTextFile(dotenvPath);
+  
+  // Parse .env content manually to avoid external dependencies
+  for (const line of dotenvContent.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key) {
+        const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+        // Only set if not already set (allows actual env vars to override .env)
+        if (!Deno.env.has(key)) {
+          Deno.env.set(key, value);
+        }
+      }
+    }
+  }
+} catch (error) {
+  console.warn("Could not load .env file:", error.message);
+  console.warn("Using system environment variables only");
+}
 
 // Deployment data interface
 export interface DeploymentData {
