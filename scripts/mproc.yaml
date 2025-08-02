@@ -1,0 +1,17 @@
+# mproc configuration for Bridge Me Not V2
+# Runs Base and Etherlink chains in parallel
+
+procs:
+  base:
+    shell: bash scripts/anvil-base.sh
+    label: BASE
+    color: blue
+    restart: on-failure
+    stop: term
+    
+  etherlink:
+    shell: bash scripts/anvil-etherlink.sh  
+    label: ETHERLINK
+    color: green
+    restart: on-failure
+    stop: term
