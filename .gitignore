@@ -16,3 +16,11 @@ docs/
 # Logs
 logs/
 mprocs.log
+
+# Deployment artifacts
+deployments/
+deployment.json
+deployment.json.tmp
+
+# Broadcast files (except for mainnet)
+/broadcast/
