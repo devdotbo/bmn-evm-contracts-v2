@@ -4,6 +4,31 @@ import type { Hex, Address } from "viem";
 // Load environment variables
 await load({ export: true, envPath: "../.env" });
 
+// Deployment data interface
+export interface DeploymentData {
+  timestamp: string;
+  chains: {
+    base?: {
+      chainId: number;
+      rpcUrl: string;
+      contracts: {
+        MockUSDC?: Address;
+        SimpleEscrowFactory?: Address;
+        OneInchAdapter?: Address;
+      };
+    };
+    etherlink?: {
+      chainId: number;
+      rpcUrl: string;
+      contracts: {
+        MockXTZ?: Address;
+        SimpleEscrowFactory?: Address;
+        LightningBridge?: Address;
+      };
+    };
+  };
+}
+
 // Configuration interface
 export interface Config {
   // RPC URLs
@@ -18,7 +43,7 @@ export interface Config {
   baseChainId: number;
   etherlinkChainId: number;
   
-  // Contract addresses (optional, can be loaded from deployment)
+  // Contract addresses (loaded from deployment.json)
   factoryAddressBase?: Address;
   factoryAddressEtherlink?: Address;
   usdcAddress?: Address;
@@ -73,6 +98,48 @@ export function validateConfig(config: Config): void {
   if (!config.bobPrivateKey.startsWith("0x") || config.bobPrivateKey.length !== 66) {
     throw new Error("Invalid Bob private key format");
   }
+}
+
+// Load deployment data
+export async function loadDeploymentData(): Promise<DeploymentData | null> {
+  try {
+    const deploymentPath = "../deployment.json";
+    const data = await Deno.readTextFile(deploymentPath);
+    return JSON.parse(data) as DeploymentData;
+  } catch (error) {
+    console.warn("Could not load deployment.json:", error.message);
+    return null;
+  }
+}
+
+// Get configuration with deployment data
+export async function getConfigWithDeployment(): Promise<Config> {
+  const baseConfig = getConfig();
+  const deployment = await loadDeploymentData();
+  
+  if (deployment) {
+    // Load contract addresses from deployment
+    if (deployment.chains.base) {
+      baseConfig.factoryAddressBase = deployment.chains.base.contracts.SimpleEscrowFactory;
+      baseConfig.usdcAddress = deployment.chains.base.contracts.MockUSDC;
+    }
+    
+    if (deployment.chains.etherlink) {
+      baseConfig.factoryAddressEtherlink = deployment.chains.etherlink.contracts.SimpleEscrowFactory;
+      baseConfig.xtzAddress = deployment.chains.etherlink.contracts.MockXTZ;
+    }
+    
+    console.log("Loaded contract addresses from deployment.json");
+  } else {
+    console.warn("No deployment data found, using default addresses");
+    // Fallback to default addresses for local testing
+    baseConfig.factoryAddressBase = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as Address;
+    baseConfig.factoryAddressEtherlink = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as Address;
+    baseConfig.usdcAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as Address;
+    baseConfig.xtzAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as Address;
+  }
+  
+  return baseConfig;
 }
 
 // Export default config
