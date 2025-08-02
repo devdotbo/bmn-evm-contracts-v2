@@ -1,3 +1,6 @@
+// Deno test for atomic swaps using Viem
+// Run with: deno run --allow-read --allow-env --allow-write --allow-net test-atomic-swap.ts
+
 import { 
   createPublicClient, 
   createWalletClient, 
@@ -15,12 +18,32 @@ import { privateKeyToAccount } from "viem/accounts";
 import { getConfigWithDeployment } from "./config.ts";
 import { ERC20_ABI, FACTORY_ABI, ESCROW_ABI } from "./abis/index.ts";
 
-// Logger utility
+// Environment validation
+function validateEnvironment() {
+  const requiredEnvVars = ['ALICE_KEY', 'BOB_KEY', 'BASE_RPC', 'ETHERLINK_RPC'];
+  const missing = requiredEnvVars.filter(varName => !Deno.env.get(varName));
+  
+  if (missing.length > 0) {
+    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+    console.error('Please ensure your .env file contains all required variables');
+    Deno.exit(1);
+  }
+}
+
+// Logger utility with proper Deno permissions
 class Logger {
   private logFile: string;
   
   constructor(logFile: string) {
     this.logFile = logFile;
+    // Create logs directory if it doesn't exist
+    try {
+      Deno.mkdirSync("../logs", { recursive: true });
+    } catch (error) {
+      if (!(error instanceof Deno.errors.AlreadyExists)) {
+        throw error;
+      }
+    }
     // Reset log file
     Deno.writeTextFileSync(this.logFile, `Atomic Swap Test Log - ${new Date().toISOString()}\n${"=".repeat(80)}\n\n`);
   }
@@ -405,7 +428,29 @@ async function testAtomicSwap() {
   }
 }
 
-// Run the test
+// Run the test with proper Deno permissions check
 if (import.meta.main) {
-  testAtomicSwap().catch(console.error);
+  // Validate environment before running
+  validateEnvironment();
+  
+  // Check required permissions
+  const permissions = await Promise.all([
+    Deno.permissions.query({ name: "read" }),
+    Deno.permissions.query({ name: "write" }),
+    Deno.permissions.query({ name: "env" }),
+    Deno.permissions.query({ name: "net" }),
+  ]);
+  
+  const denied = permissions.filter(p => p.state !== "granted");
+  if (denied.length > 0) {
+    console.error("Missing required permissions. Please run with:");
+    console.error("deno run --allow-read --allow-write --allow-env --allow-net test-atomic-swap.ts");
+    Deno.exit(1);
+  }
+  
+  // Run the test
+  testAtomicSwap().catch((error) => {
+    console.error("Test failed:", error);
+    Deno.exit(1);
+  });
 }
