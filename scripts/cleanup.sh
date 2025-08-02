@@ -12,6 +12,9 @@ NC='\033[0m' # No Color
 
 # Parse command line arguments
 AUTO_APPROVE=false
+DEEP_CLEAN=false
+KEEP_LOGS=false
+DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -19,9 +22,24 @@ while [[ $# -gt 0 ]]; do
             AUTO_APPROVE=true
             shift
             ;;
+        --deep)
+            DEEP_CLEAN=true
+            shift
+            ;;
+        --keep-logs)
+            KEEP_LOGS=true
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
         -h|--help)
-            echo "Usage: $0 [-y|--yes]"
-            echo "  -y, --yes  Auto-approve all prompts"
+            echo "Usage: $0 [-y|--yes] [--deep] [--keep-logs] [--dry-run]"
+            echo "  -y, --yes      Auto-approve all prompts"
+            echo "  --deep         Remove all artifacts including compiled contracts"
+            echo "  --keep-logs    Preserve log files"
+            echo "  --dry-run      Show what would be deleted without deleting"
             exit 0
             ;;
         *)
@@ -140,12 +158,71 @@ fi
 # Clean up temporary files
 log ""
 log "Cleaning up temporary files..."
-rm -f /tmp/bmn-chains.yml
-rm -f /tmp/bmn-mproc.pid
+if [ "$DRY_RUN" = true ]; then
+    log "[DRY RUN] Would remove:"
+    [ -f /tmp/bmn-chains.yml ] && log "  - /tmp/bmn-chains.yml"
+    [ -f /tmp/bmn-mproc.pid ] && log "  - /tmp/bmn-mproc.pid"
+else
+    rm -f /tmp/bmn-chains.yml
+    rm -f /tmp/bmn-mproc.pid
+fi
 
 # Clean up any foundry cache files
 if [ -d .foundry ]; then
-    find .foundry -name "*.tmp" -type f -delete 2>/dev/null || true
+    if [ "$DRY_RUN" = true ]; then
+        FOUNDRY_TEMPS=$(find .foundry -name "*.tmp" -type f 2>/dev/null | wc -l)
+        [ "$FOUNDRY_TEMPS" -gt 0 ] && log "[DRY RUN] Would remove $FOUNDRY_TEMPS temp files from .foundry"
+    else
+        find .foundry -name "*.tmp" -type f -delete 2>/dev/null || true
+    fi
+fi
+
+# Clean up deployment artifacts if deep clean is requested
+if [ "$DEEP_CLEAN" = true ]; then
+    log ""
+    log "Deep cleaning deployment artifacts..."
+    
+    # List of directories and files to clean
+    declare -a CLEAN_TARGETS=(
+        "broadcast"
+        "cache"
+        "out"
+        "deployments"
+        "deployment.json"
+        "deployment.json.tmp"
+    )
+    
+    for target in "${CLEAN_TARGETS[@]}"; do
+        if [ -e "$target" ]; then
+            if [ "$DRY_RUN" = true ]; then
+                if [ -d "$target" ]; then
+                    FILE_COUNT=$(find "$target" -type f 2>/dev/null | wc -l)
+                    log "[DRY RUN] Would remove directory: $target (contains $FILE_COUNT files)"
+                else
+                    log "[DRY RUN] Would remove file: $target"
+                fi
+            else
+                if [ -d "$target" ]; then
+                    log "Removing directory: $target"
+                    rm -rf "$target"
+                else
+                    log "Removing file: $target"
+                    rm -f "$target"
+                fi
+            fi
+        fi
+    done
+    
+    # Clean up logs unless --keep-logs is specified
+    if [ "$KEEP_LOGS" = false ] && [ -d "logs" ]; then
+        if [ "$DRY_RUN" = true ]; then
+            LOG_COUNT=$(find logs -name "*.log" -type f 2>/dev/null | wc -l)
+            log "[DRY RUN] Would remove logs directory (contains $LOG_COUNT log files)"
+        else
+            log "Removing logs directory"
+            rm -rf logs
+        fi
+    fi
 fi
 
 # Final verification
@@ -165,8 +242,16 @@ fi
 
 if [ "$CLEANUP_SUCCESS" = true ]; then
     echo ""
-    echo -e "${GREEN}✓ Cleanup completed successfully${NC}"
-    echo "All BMN processes have been stopped"
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${GREEN}✓ Dry run completed${NC}"
+        echo "No changes were made. Remove --dry-run to perform actual cleanup"
+    else
+        echo -e "${GREEN}✓ Cleanup completed successfully${NC}"
+        echo "All BMN processes have been stopped"
+        if [ "$DEEP_CLEAN" = true ]; then
+            echo "All deployment artifacts have been removed"
+        fi
+    fi
 else
     echo ""
     echo -e "${YELLOW}⚠ Cleanup completed with warnings${NC}"
