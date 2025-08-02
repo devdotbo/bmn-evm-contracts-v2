@@ -29,6 +29,7 @@ BASE_RPC="${BASE_RPC:-http://localhost:8545}"
 ETHERLINK_RPC="${ETHERLINK_RPC:-http://localhost:8546}"
 PRIVATE_KEY="${PRIVATE_KEY}"
 NON_INTERACTIVE=false
+CLEAN_BEFORE_DEPLOY=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -37,9 +38,15 @@ while [[ $# -gt 0 ]]; do
             NON_INTERACTIVE=true
             shift
             ;;
+        --clean)
+            CLEAN_BEFORE_DEPLOY=true
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [-y|--yes]"
+            echo "Usage: $0 [-y|--yes] [--clean]"
+            echo "  -y, --yes   Auto-approve deployment"
+            echo "  --clean     Run cleanup before deployment"
             exit 1
             ;;
     esac
@@ -144,6 +151,24 @@ extract_address() {
 initialize() {
     log "Initializing Bridge Me Not V2 deployment..."
     
+    # Run cleanup if requested
+    if [ "$CLEAN_BEFORE_DEPLOY" = true ]; then
+        log "Running cleanup before deployment..."
+        if [ -f "$SCRIPT_DIR/cleanup.sh" ]; then
+            "$SCRIPT_DIR/cleanup.sh" -y --deep --keep-logs
+            if [ $? -eq 0 ]; then
+                log_success "Cleanup completed successfully"
+            else
+                log_error "Cleanup failed"
+                exit 1
+            fi
+        else
+            log_error "cleanup.sh not found"
+            exit 1
+        fi
+        echo ""
+    fi
+    
     # Create logs directory
     mkdir -p "$LOG_DIR"
     
@@ -162,6 +187,10 @@ initialize() {
         echo -e "${YELLOW}You are about to deploy Bridge Me Not V2 contracts to:${NC}"
         echo "  - Base: $BASE_RPC"
         echo "  - Etherlink: $ETHERLINK_RPC"
+        if [ "$CLEAN_BEFORE_DEPLOY" = true ]; then
+            echo ""
+            echo -e "${YELLOW}Note: Cleanup was performed before deployment${NC}"
+        fi
         echo ""
         read -p "Continue? (y/N) " -n 1 -r
         echo ""
@@ -194,10 +223,13 @@ main() {
         exit 1
     fi
     
-    # Initialize deployment JSON
-    echo "{
-  \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",
-  \"chains\": {}" > "$DEPLOYMENT_FILE"
+    # Initialize deployment JSON with proper closing
+    cat > "$DEPLOYMENT_FILE" << EOF
+{
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "chains": {}
+}
+EOF
     
     # Deploy to Base
     log ""
@@ -296,6 +328,17 @@ main() {
             "LightningBridge": $lightning
           }
         }' "$DEPLOYMENT_FILE" > "$DEPLOYMENT_FILE.tmp" && mv "$DEPLOYMENT_FILE.tmp" "$DEPLOYMENT_FILE"
+    
+    # Validate final deployment.json
+    if jq . "$DEPLOYMENT_FILE" > /dev/null 2>&1; then
+        log ""
+        log "Deployment JSON validated successfully"
+    else
+        log_error "WARNING: deployment.json is invalid JSON"
+        log "Attempting to fix..."
+        # Ensure proper closing
+        echo "}" >> "$DEPLOYMENT_FILE"
+    fi
     
     # Summary
     log ""
