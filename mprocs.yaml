@@ -68,6 +68,15 @@ procs:
     autostart: false
     stop: "SIGTERM"
   
+  test-deno:
+    shell: ./scripts/test-runner.sh
+    label: TEST-DENO
+    color: bright-cyan
+    autostart: false
+    stop: "SIGTERM"
+    env:
+      LOG_LEVEL: info
+  
   # === Utilities ===
   cleanup:
     shell: ./scripts/cleanup.sh -y
