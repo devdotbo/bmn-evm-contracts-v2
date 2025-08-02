@@ -9,7 +9,8 @@ import "../src/mocks/MockERC20.sol";
 
 contract QuickDemo is Script {
     function run() external {
-        uint256 deployerKey = vm.envUint("PRIVATE_KEY");
+        // Load private key from environment
+        uint256 deployerKey = vm.envOr("PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
         address alice = vm.addr(deployerKey);
         address bob = address(0xB0B);
         
@@ -20,7 +21,7 @@ contract QuickDemo is Script {
         console.log("Bob:", bob);
         
         // Deploy mock token
-        MockERC20 token = new MockERC20("Demo USDC", "USDC", 6);
+        MockERC20 token = new MockERC20("Demo USDC", "USDC", 6, 0);
         console.log("Token deployed:", address(token));
         
         // Mint tokens to Alice
@@ -59,22 +60,11 @@ contract QuickDemo is Script {
         console.log("Escrow funded with 100 USDC");
         
         // Show escrow details
-        (
-            address _token,
-            address _sender,
-            address _recipient,
-            uint256 _amount,
-            bytes32 _hashlock,
-            uint256 _timelock,
-            bool _funded,
-            bool _withdrawn,
-            bool _refunded,
-            bytes32 _preimage
-        ) = SimpleEscrow(escrow).getDetails();
+        SimpleEscrow.EscrowDetails memory details = SimpleEscrow(escrow).getDetails();
         
         console.log("\n=== Escrow Details ===");
-        console.log("Amount locked:", _amount / 10**6, "USDC");
-        console.log("Funded:", _funded);
+        console.log("Amount locked:", details.amount / 10**6, "USDC");
+        console.log("Funded:", details.funded);
         console.log("Can withdraw:", SimpleEscrow(escrow).canWithdraw());
         
         // Simulate Bob withdrawing with secret
@@ -86,9 +76,9 @@ contract QuickDemo is Script {
         console.log("Withdrawal successful!");
         
         // Check final state
-        (, , , , , , , bool withdrawn, , bytes32 revealedPreimage) = SimpleEscrow(escrow).getDetails();
-        console.log("Withdrawn:", withdrawn);
-        console.log("Revealed preimage:", vm.toString(revealedPreimage));
+        SimpleEscrow.EscrowDetails memory finalDetails = SimpleEscrow(escrow).getDetails();
+        console.log("Withdrawn:", finalDetails.withdrawn);
+        console.log("Revealed preimage:", vm.toString(finalDetails.preimage));
         console.log("Bob's balance:", token.balanceOf(bob) / 10**6, "USDC");
         
         console.log("\n=== Demo Complete! ===");
