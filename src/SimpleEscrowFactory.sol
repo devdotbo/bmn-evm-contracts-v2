@@ -98,18 +98,18 @@ contract SimpleEscrowFactory is Ownable {
         bytes32 salt,
         uint256 amount
     ) external returns (address escrow) {
-        require(msg.sender == sender, "SimpleEscrowFactory: only sender can fund");
+        require(msg.sender == sender, "SimpleEscrowFactory: only sender can create and fund");
         require(amount > 0, "SimpleEscrowFactory: amount must be greater than 0");
 
         // Create escrow
         escrow = _createEscrow(token, sender, recipient, hashlock, timelock, salt);
 
-        // Transfer tokens from caller to escrow
+        // Transfer tokens directly from sender to escrow
         IERC20(token).safeTransferFrom(msg.sender, escrow, amount);
-
-        // Fund the escrow
-        SimpleEscrow(escrow).fund(amount);
-
+        
+        // Initialize the escrow with the transferred funds
+        SimpleEscrow(escrow).initializeWithFunds(amount);
+        
         return escrow;
     }
 
