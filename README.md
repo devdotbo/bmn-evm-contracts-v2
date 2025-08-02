@@ -44,13 +44,39 @@ forge script script/Deploy.s.sol --rpc-url anvil --broadcast
 forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --verify
 ```
 
+### Multi-Chain Development Setup
+
+```bash
+# Start local chains (Base & Etherlink)
+mprocs -c mprocs.yaml
+
+# Deploy contracts to both chains
+./scripts/deploy.sh -y
+
+# Run atomic swap tests (Deno/Viem-based)
+./scripts/test-runner.sh
+
+# Or use mprocs interactive mode
+# Then press 's' to start a process, select 'test-deno'
+```
+
 ## Contract Addresses
 
-### Testnet Deployments (Sepolia)
-- **BMNAtomicSwapFactory**: `0x[PENDING]`
-- **BMN1inchIntegration**: `0x[PENDING]`
-- **SimpleEscrowFactory**: `0x[PENDING]`
-- **LightningBridge**: `0x[PENDING]`
+### Local Development (Anvil)
+When running locally with `mprocs`, contracts are deployed to:
+
+**Base Chain (localhost:8545)**
+- **SimpleEscrowFactory**: Check `deployment.json`
+- **MockUSDC**: Check `deployment.json`
+- **OneInchAdapter**: Check `deployment.json`
+
+**Etherlink Chain (localhost:8546)**
+- **SimpleEscrowFactory**: Check `deployment.json`
+- **MockXTZ**: Check `deployment.json`
+- **LightningBridge**: Check `deployment.json`
+
+### Testnet Deployments
+*Coming soon*
 
 ### Mainnet Deployments
 *Coming soon after audit completion*
