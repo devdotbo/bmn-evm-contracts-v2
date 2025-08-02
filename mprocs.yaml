@@ -8,7 +8,7 @@ procs:
     label: BASE
     color: blue
     restart: on-failure
-    stop: term
+    stop: "SIGTERM"
     autostart: true
     env:
       CHAIN_NAME: "Base (Chain ID: 8453)"
@@ -18,7 +18,7 @@ procs:
     label: ETHERLINK
     color: green
     restart: on-failure
-    stop: term
+    stop: "SIGTERM"
     autostart: true
     env:
       CHAIN_NAME: "Etherlink (Chain ID: 42793)"
@@ -29,14 +29,14 @@ procs:
     label: DEPLOY
     color: yellow
     autostart: false
-    stop: term
+    stop: "SIGTERM"
   
   fund-accounts:
     shell: ./scripts/fund-accounts.sh
     label: FUND
     color: cyan
     autostart: false
-    stop: term
+    stop: "SIGTERM"
   
   # === Monitoring ===
   status:
@@ -44,14 +44,14 @@ procs:
     label: STATUS
     color: magenta
     autostart: false
-    stop: term
+    stop: "SIGTERM"
   
   watch-status:
     shell: ./scripts/watch-status.sh
     label: WATCH
     color: white
     autostart: false
-    stop: term
+    stop: "SIGTERM"
   
   # === Testing ===
   test-atomic-swap:
@@ -59,14 +59,14 @@ procs:
     label: TEST-SWAP
     color: bright-green
     autostart: false
-    stop: term
+    stop: "SIGTERM"
   
   test-atomic-swap-verbose:
     shell: VERBOSE=true ./scripts/test-atomic-swap.sh
     label: TEST-VERBOSE
     color: bright-yellow
     autostart: false
-    stop: term
+    stop: "SIGTERM"
   
   # === Utilities ===
   cleanup:
@@ -74,7 +74,7 @@ procs:
     label: CLEANUP
     color: red
     autostart: false
-    stop: term
+    stop: "SIGTERM"
 
 # Configuration for better development experience
 scrollback: 5000
