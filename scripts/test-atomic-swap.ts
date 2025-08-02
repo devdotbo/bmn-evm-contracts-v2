@@ -12,6 +12,8 @@ import {
   type Hex
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { getConfigWithDeployment } from "./config.ts";
+import { ERC20_ABI, FACTORY_ABI, ESCROW_ABI } from "./abis/index.ts";
 
 // Logger utility
 class Logger {
@@ -38,116 +40,6 @@ class Logger {
   }
 }
 
-// Contract ABIs
-const ERC20_ABI = [
-  {
-    "inputs": [
-      { "name": "spender", "type": "address" },
-      { "name": "amount", "type": "uint256" }
-    ],
-    "name": "approve",
-    "outputs": [{ "name": "", "type": "bool" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "name": "account", "type": "address" }],
-    "name": "balanceOf",
-    "outputs": [{ "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "name": "to", "type": "address" },
-      { "name": "amount", "type": "uint256" }
-    ],
-    "name": "mint",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [{ "name": "", "type": "uint8" }],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
-
-const FACTORY_ABI = [
-  {
-    "inputs": [
-      { "name": "token", "type": "address" },
-      { "name": "sender", "type": "address" },
-      { "name": "recipient", "type": "address" },
-      { "name": "hashlock", "type": "bytes32" },
-      { "name": "timelock", "type": "uint256" },
-      { "name": "salt", "type": "bytes32" },
-      { "name": "amount", "type": "uint256" }
-    ],
-    "name": "createEscrowWithFunding",
-    "outputs": [{ "name": "escrow", "type": "address" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "name": "token", "type": "address" },
-      { "name": "sender", "type": "address" },
-      { "name": "recipient", "type": "address" },
-      { "name": "hashlock", "type": "bytes32" },
-      { "name": "timelock", "type": "uint256" },
-      { "name": "salt", "type": "bytes32" }
-    ],
-    "name": "computeEscrowAddress",
-    "outputs": [{ "name": "", "type": "address" }],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
-
-const ESCROW_ABI = [
-  {
-    "inputs": [{ "name": "_preimage", "type": "bytes32" }],
-    "name": "withdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "refund",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getDetails",
-    "outputs": [
-      {
-        "components": [
-          { "name": "token", "type": "address" },
-          { "name": "sender", "type": "address" },
-          { "name": "recipient", "type": "address" },
-          { "name": "hashlock", "type": "bytes32" },
-          { "name": "timelock", "type": "uint256" },
-          { "name": "amount", "type": "uint256" },
-          { "name": "funded", "type": "bool" },
-          { "name": "withdrawn", "type": "bool" },
-          { "name": "refunded", "type": "bool" },
-          { "name": "preimage", "type": "bytes32" }
-        ],
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
 
 // Utility functions
 async function sleep(ms: number): Promise<void> {
@@ -175,16 +67,11 @@ async function testAtomicSwap() {
   const logger = new Logger("../logs/atomic-swap.log");
   logger.log("Starting Atomic Swap Test");
   
-  // Configuration
-  const BASE_RPC = "http://localhost:8545";
-  const ETHERLINK_RPC = "http://localhost:8546";
+  // Load configuration with deployment data
+  const config = await getConfigWithDeployment();
   
-  // Test accounts (Anvil default accounts)
-  const alicePrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex;
-  const bobPrivateKey = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as Hex;
-  
-  const alice = privateKeyToAccount(alicePrivateKey);
-  const bob = privateKeyToAccount(bobPrivateKey);
+  const alice = privateKeyToAccount(config.alicePrivateKey);
+  const bob = privateKeyToAccount(config.bobPrivateKey);
   
   logger.log("Test Accounts", {
     alice: alice.address,
@@ -193,35 +80,40 @@ async function testAtomicSwap() {
   
   // Create clients
   const basePublicClient = createPublicClient({
-    transport: http(BASE_RPC)
+    transport: http(config.baseRpc)
   });
   
   const etherlinkPublicClient = createPublicClient({
-    transport: http(ETHERLINK_RPC)
+    transport: http(config.etherlinkRpc)
   });
   
   const baseWalletClient = createWalletClient({
     account: alice,
-    transport: http(BASE_RPC)
+    transport: http(config.baseRpc)
   });
   
   const etherlinkWalletClient = createWalletClient({
     account: bob,
-    transport: http(ETHERLINK_RPC)
+    transport: http(config.etherlinkRpc)
   });
   
   try {
     // Load deployment addresses
     logger.log("Loading deployment addresses...");
     
-    // Since we don't have deployment.json, we'll use known addresses from the deploy script
-    // These are deterministic addresses when using Anvil
-    const factoryAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as Address; // First deployed contract
-    const usdcAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as Address; // Second deployed contract (MockERC20)
-    const xtzAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0" as Address; // Third deployed contract (MockERC20)
+    // Validate that we have all required addresses
+    if (!config.factoryAddressBase || !config.factoryAddressEtherlink || !config.usdcAddress || !config.xtzAddress) {
+      throw new Error("Missing contract addresses. Please run deployment script first.");
+    }
+    
+    const factoryAddressBase = config.factoryAddressBase;
+    const factoryAddressEtherlink = config.factoryAddressEtherlink;
+    const usdcAddress = config.usdcAddress;
+    const xtzAddress = config.xtzAddress;
     
     logger.log("Contract Addresses", {
-      factory: factoryAddress,
+      factoryBase: factoryAddressBase,
+      factoryEtherlink: factoryAddressEtherlink,
       usdc: usdcAddress,
       xtz: xtzAddress
     });
@@ -291,13 +183,13 @@ async function testAtomicSwap() {
       address: usdcAddress,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [factoryAddress, usdcAmount]
+      args: [factoryAddressBase, usdcAmount]
     });
     await sleep(2000);
     
     // Alice creates escrow on Base
     const createEscrowTx = await baseWalletClient.writeContract({
-      address: factoryAddress,
+      address: factoryAddressBase,
       abi: FACTORY_ABI,
       functionName: "createEscrowWithFunding",
       args: [
@@ -316,7 +208,7 @@ async function testAtomicSwap() {
     
     // Get escrow address
     const baseEscrowAddress = await basePublicClient.readContract({
-      address: factoryAddress,
+      address: factoryAddressBase,
       abi: FACTORY_ABI,
       functionName: "computeEscrowAddress",
       args: [usdcAddress, alice.address, bob.address, hashlock, timelock, salt]
@@ -343,14 +235,14 @@ async function testAtomicSwap() {
       address: xtzAddress,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [factoryAddress, xtzAmount]
+      args: [factoryAddressEtherlink, xtzAmount]
     });
     await sleep(2000);
     
     // Bob creates escrow on Etherlink with same hashlock
     const bobSalt = keccak256("0x" + (Date.now() + 1).toString(16)) as Hex;
     const createEscrowTx2 = await etherlinkWalletClient.writeContract({
-      address: factoryAddress,
+      address: factoryAddressEtherlink,
       abi: FACTORY_ABI,
       functionName: "createEscrowWithFunding",
       args: [
@@ -369,7 +261,7 @@ async function testAtomicSwap() {
     
     // Get Etherlink escrow address
     const etherlinkEscrowAddress = await etherlinkPublicClient.readContract({
-      address: factoryAddress,
+      address: factoryAddressEtherlink,
       abi: FACTORY_ABI,
       functionName: "computeEscrowAddress",
       args: [xtzAddress, bob.address, alice.address, hashlock, timelock, bobSalt]
@@ -385,7 +277,7 @@ async function testAtomicSwap() {
     // Alice withdraws on Etherlink using the preimage
     const aliceEtherlinkWallet = createWalletClient({
       account: alice,
-      transport: http(ETHERLINK_RPC)
+      transport: http(config.etherlinkRpc)
     });
     
     const withdrawTx = await aliceEtherlinkWallet.writeContract({
@@ -423,7 +315,7 @@ async function testAtomicSwap() {
     // Bob withdraws on Base using the revealed preimage
     const bobBaseWallet = createWalletClient({
       account: bob,
-      transport: http(BASE_RPC)
+      transport: http(config.baseRpc)
     });
     
     const withdrawTx2 = await bobBaseWallet.writeContract({
