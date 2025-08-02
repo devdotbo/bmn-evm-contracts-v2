@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Instructions
+
+- **ALWAYS use Context7 to look up any errors encountered during development**. When you get an error, search Context7 for documentation about that specific error before attempting to fix it.
+
 ## Project Overview
 
 This is a Foundry-based smart contract project for Bridge Me Not (BMN) EVM contracts v2. The project uses Foundry's development toolkit including Forge for testing, Cast for interacting with contracts, and Anvil for local development.
