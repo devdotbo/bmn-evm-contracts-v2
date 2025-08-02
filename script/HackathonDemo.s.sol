@@ -74,10 +74,10 @@ contract HackathonDemo is Script {
         
         console.log("\n=== DEMO COMPLETE! ===");
         console.log("Key Innovations Demonstrated:");
-        console.log("  ✓ Trustless atomic swaps without bridges");
-        console.log("  ✓ 1inch Limit Order Protocol integration");
-        console.log("  ✓ Lightning Network bridging with same preimage");
-        console.log("  ✓ Gas-efficient single-timeout design");
+        console.log("  [v] Trustless atomic swaps without bridges");
+        console.log("  [v] 1inch Limit Order Protocol integration");
+        console.log("  [v] Lightning Network bridging with same preimage");
+        console.log("  [v] Gas-efficient single-timeout design");
         
         vm.stopBroadcast();
     }
