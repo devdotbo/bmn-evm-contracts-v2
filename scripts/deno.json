@@ -1,0 +1,57 @@
+{
+  "tasks": {
+    "test": "deno test --allow-all",
+    "test:atomic-swap": "deno run --allow-net --allow-read --allow-write --allow-env test-atomic-swap.ts",
+    "build": "cd .. && forge build && cd scripts && ./copy-abis.sh",
+    "setup": "deno run --allow-read --allow-write --allow-run setup.ts",
+    "demo": "deno run --allow-all demo-atomic-swap.ts"
+  },
+  "imports": {
+    "viem": "https://esm.sh/viem@2.21.60",
+    "viem/chains": "https://esm.sh/viem@2.21.60/chains",
+    "viem/accounts": "https://esm.sh/viem@2.21.60/accounts",
+    "@std/dotenv": "https://deno.land/std@0.208.0/dotenv/mod.ts",
+    "@std/testing": "https://deno.land/std@0.208.0/testing/mod.ts",
+    "@std/assert": "https://deno.land/std@0.208.0/assert/mod.ts"
+  },
+  "lint": {
+    "include": ["**/*.ts"],
+    "exclude": ["abis/"],
+    "rules": {
+      "tags": ["recommended"],
+      "include": ["ban-untagged-todo"],
+      "exclude": ["no-explicit-any"]
+    }
+  },
+  "fmt": {
+    "include": ["**/*.ts", "**/*.json"],
+    "exclude": ["abis/"],
+    "options": {
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": true,
+      "proseWrap": "preserve"
+    }
+  },
+  "test": {
+    "include": ["**/*_test.ts", "**/*.test.ts"],
+    "exclude": ["abis/"]
+  },
+  "compilerOptions": {
+    "allowJs": false,
+    "lib": ["deno.window", "dom"],
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment"
+  },
+  "permissions": {
+    "net": ["localhost:8545", "localhost:8546"],
+    "read": true,
+    "write": ["../logs"],
+    "env": ["PRIVATE_KEY", "BASE_RPC", "ETHERLINK_RPC", "ALICE_KEY", "BOB_KEY"],
+    "run": ["forge", "anvil", "cast"]
+  }
+}
