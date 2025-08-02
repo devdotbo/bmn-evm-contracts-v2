@@ -72,6 +72,19 @@ check_deployment() {
     return 0
 }
 
+# Check Deno installation
+check_deno() {
+    if ! command -v deno &> /dev/null; then
+        log_error "Deno is not installed. Please install Deno first."
+        log_error "Visit: https://docs.deno.com/runtime/getting_started/installation"
+        return 1
+    fi
+    
+    local deno_version=$(deno --version | head -n1 | cut -d' ' -f2)
+    log "Found Deno version: $deno_version"
+    return 0
+}
+
 # Run Deno tests
 run_tests() {
     log "Running atomic swap tests..."
@@ -84,8 +97,9 @@ run_tests() {
         ./copy-abis.sh
     fi
     
-    # Run the test
-    if deno run --allow-all test-atomic-swap.ts; then
+    # Run the test with proper Deno permissions
+    log "Starting Deno test with required permissions..."
+    if deno run --allow-read --allow-write --allow-env --allow-net test-atomic-swap.ts; then
         log "Tests completed successfully ✓"
         return 0
     else
@@ -101,9 +115,14 @@ main() {
     # Create logs directory
     mkdir -p "$LOG_DIR"
     
+    # Check Deno installation
+    if ! check_deno; then
+        exit 1
+    fi
+    
     # Pre-flight checks
     if ! check_chains; then
-        log_error "Please start chains first with: mprocs -c mproc.yaml"
+        log_error "Please start chains first with: mprocs -c mprocs.yaml"
         exit 1
     fi
     
