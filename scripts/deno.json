@@ -1,0 +1,21 @@
+{
+  "tasks": {
+    "test-atomic-swap": "deno run --allow-net --allow-read --allow-write --allow-env test-atomic-swap.ts"
+  },
+  "imports": {
+    "viem": "https://esm.sh/viem@2.21.60",
+    "viem/chains": "https://esm.sh/viem@2.21.60/chains",
+    "viem/accounts": "https://esm.sh/viem@2.21.60/accounts"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "permissions": {
+    "net": ["localhost:8545", "localhost:8546"],
+    "read": ["./", "../deployments", "../src", "../out"],
+    "write": ["../logs"],
+    "env": ["PRIVATE_KEY"]
+  }
+}
