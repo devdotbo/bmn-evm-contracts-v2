@@ -7,9 +7,9 @@
     "demo": "deno run --allow-all demo-atomic-swap.ts"
   },
   "imports": {
-    "viem": "https://esm.sh/viem@2.21.60",
-    "viem/chains": "https://esm.sh/viem@2.21.60/chains",
-    "viem/accounts": "https://esm.sh/viem@2.21.60/accounts",
+    "viem": "npm:viem@^2.21.60",
+    "viem/chains": "npm:viem@^2.21.60/chains",
+    "viem/accounts": "npm:viem@^2.21.60/accounts",
     "@std/dotenv": "https://deno.land/std@0.208.0/dotenv/mod.ts",
     "@std/testing": "https://deno.land/std@0.208.0/testing/mod.ts",
     "@std/assert": "https://deno.land/std@0.208.0/assert/mod.ts"
