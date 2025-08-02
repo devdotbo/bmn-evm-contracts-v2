@@ -19,6 +19,7 @@ contract SimpleEscrow is ReentrancyGuard {
     address public immutable recipient;  // Party who can withdraw with preimage
     bytes32 public immutable hashlock;   // Hash of the secret preimage
     uint256 public immutable timelock;   // Timestamp after which sender can refund
+    address public immutable factory;    // Factory that created this escrow
 
     // Mutable state variables
     uint256 public amount;              // Amount of tokens locked
@@ -74,6 +75,7 @@ contract SimpleEscrow is ReentrancyGuard {
         bytes32 _hashlock,
         uint256 _timelock
     ) {
+        factory = msg.sender;
         require(_token != address(0), "SimpleEscrow: token cannot be zero address");
         require(_sender != address(0), "SimpleEscrow: sender cannot be zero address");
         require(_recipient != address(0), "SimpleEscrow: recipient cannot be zero address");
@@ -100,6 +102,22 @@ contract SimpleEscrow is ReentrancyGuard {
         funded = true;
 
         IERC20(token).safeTransferFrom(sender, address(this), _amount);
+
+        emit EscrowFunded(sender, _amount, token);
+    }
+
+    /**
+     * @notice Allows factory to initialize escrow with pre-transferred funds
+     * @param _amount Amount of tokens already transferred to this contract
+     */
+    function initializeWithFunds(uint256 _amount) external nonReentrant {
+        require(msg.sender == factory, "SimpleEscrow: only factory can initialize");
+        require(!funded, "SimpleEscrow: already funded");
+        require(_amount > 0, "SimpleEscrow: amount must be greater than 0");
+        require(IERC20(token).balanceOf(address(this)) >= _amount, "SimpleEscrow: insufficient balance");
+
+        amount = _amount;
+        funded = true;
 
         emit EscrowFunded(sender, _amount, token);
     }
